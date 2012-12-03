@@ -21,8 +21,8 @@
 		"matches": ["<all_urls>"]
 	}],
 	"web_accessible_resources": [
-        "images/paypal.gif"
-    ],
+		"images/paypal.gif"
+	],
 	"permissions": [
 		"tabs",
 		"<all_urls>",
