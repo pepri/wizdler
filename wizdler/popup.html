@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html class="bootstrap"><head>
+	<meta charset="utf-8" />
+	<title>Service Tester</title>
+	<link rel="stylesheet" href="stylesheets/antiscroll.css" />
+<style>
+html { font-family: sans-serif; font-size: 13px; overflow: hidden; }
+body { padding: 0; margin: 0; }
+h1 { font-weight: normal; font-size: 13px; }
+ul { list-style: none; margin: 0; padding: 0; }
+ul ul { margin-left: 20px; }
+li { margin:0; padding: 0; padding-left: 12px; line-height: 18px; }
+a { text-decoration: none; color: #08c; }
+a:hover { text-decoration: underline; color: #005580; }
+li>span:first-child, li>a:first-child { margin: 1px; margin-left: -12px; padding: 0; padding-top: 1px; padding-left: 32px; background: no-repeat; background-position: 12px 0; }
+ul.collapsible>li.expanded { background: transparent -webkit-canvas(arrowDown) no-repeat 2px 5px; }
+ul.collapsible>li.collapsed { background: transparent -webkit-canvas(arrowRight) no-repeat 3px 4px; }
+ul.collapsible>li.collapsed>ul { display: none; }
+li>span:first-child { background-image: url(images/wsdl.png); }
+li li>span:first-child { background-image: url(images/binding.png); }
+li li li>a:first-child { background-image: url(images/operation.png); }
+body.scroller { width: 300px; max-height: 200px; overflow: hidden; }
+</style>
+<script src="scripts/jquery.min.js"></script>
+<script src="scripts/jquery-mousewheel.js"></script>
+<script src="scripts/jquery-throttle.js"></script>
+<script src="scripts/xmlSampleGenerator.js"></script>
+<script src="scripts/antiscroll.js"></script>
+<script src="scripts/vkbeautify.js"></script>
+<script src="scripts/jszip.js"></script>
+<script src="scripts/wsdl.js"></script>
+<script src="scripts/popup.js"></script>
+</head><body>
+<div id="tree">
+</div>
+</body></html>
