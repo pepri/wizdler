@@ -30,3 +30,4 @@ We do not collect nor send any information.
 -	JSZip - A JavaScript class for generating ZIP files.
 -	vkBeautify - JavaScript plugin to pretty-print or minify text in XML, JSON and CSS formats.
 -	Antiscroll - OS X Lion style cross-browser native scrolling on the web that gets out of the way.
+-	Equivalent XML JS - Equivalent XML JS is designed to ease the process of testing XML output.

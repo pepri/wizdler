@@ -1,3 +1,8 @@
+0.0.0.12
+	- SOAP headers support
+	- Optional simple elements are marked with questionmark
+	- Compressed CSS
+	- Small tweaks
 0.0.0.11
 	- XSD imports are not downloaded to show the popup as they are not needed
 0.0.0.10
