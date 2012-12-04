@@ -1,6 +1,6 @@
 {
 	"name": "Wizdler",
-	"version": "0.0.0.12",
+	"version": "0.0.0.13",
 	"manifest_version": 2,
 	"description": "Parses WSDL and generates SOAP messages for you.",
 	"icons": {
@@ -21,8 +21,8 @@
 		"matches": ["<all_urls>"]
 	}],
 	"web_accessible_resources": [
-		"images/paypal.gif"
-	],
+        "images/paypal.gif"
+    ],
 	"permissions": [
 		"tabs",
 		"<all_urls>",

@@ -1,3 +1,5 @@
+0.0.0.13
+	- Better XML recognition (works with XML Tree extension now)
 0.0.0.12
 	- SOAP headers support
 	- Optional simple elements are marked with questionmark
