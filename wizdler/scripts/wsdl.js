@@ -49,33 +49,11 @@ Wsdl.parse = function(url, text, loadSchema, callback, scope) {
 
 // Formatters.	
 Wsdl.format = {
-	// Formats the document as SOAP 1.1 message.
-	soap: function(doc) {
-		var text = doc ? new XMLSerializer().serializeToString(doc) : '';
-		return vkbeautify.xml(
-'<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">\n\
-\t<soap:Body>\n\
-' + text + '\n\
-\t</soap:Body>\n\
-</soap:Envelope>'
-		);
-	},
-
-	// Formats the document as SOAP 1.2 message.
-	soap12: function(doc) {
-		var text = doc ? new XMLSerializer().serializeToString(doc) : '';
-		return vkbeautify.xml(
-'<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">\n\
-\t<soap:Body>\n\
-' + text + '\n\
-\t</soap:Body>\n\
-</soap:Envelope>'
-		);
-	},
-	
 	// Formats the document as XML message.
 	xml: function(doc) {
 		var text = doc ? new XMLSerializer().serializeToString(doc) : '';
+		// fix unqualified namespaces
+		text = text.replace(/ xmlns="\0"/g, ' xmlns=""');
 		return vkbeautify.xml(text);
 	}
 };

@@ -39,6 +39,7 @@ function XmlSampleGenerator(schema, imports) {
 	this.instanceElementsProcessed = null;
 	this.listLength = 3;
 	this.targetNamespace = schema ? schema.getAttributeNS(null, 'targetNamespace') : '';
+	this.unqualifiedElements = schema && (schema.getAttributeNS(null, 'elementFormDefault') == 'unqualified');
 	this.globalElements = this.getGlobalElements();
 	this.globalTypes = this.getGlobalTypes();
 }
@@ -96,7 +97,8 @@ XmlSampleGenerator.prototype = {
 		this.instanceElementsProcessed[elem] = elem;
 		var doc = parentEl.ownerDocument;
 		for (var i = 0, n = elem.occurs; i < n; ++i) {
-			var el = doc.createElementNS(elem.qname.ns, elem.qname.localName);
+			// unqualified elements are not preserved in Chrome's XMLSerializer, so do some workaround
+			var el = doc.createElementNS(elem.qname.ns === null ? '\0' : elem.qname.ns, elem.qname.localName);
 			//this.processElementAttrs(el, elem);
 			//this.processComment(el, elem);
 			//this.checkIfMixed(el, elem);
@@ -140,8 +142,13 @@ XmlSampleGenerator.prototype = {
 			return null;
 		}
 		var targetNamespace = this.targetNamespace;
-		if (schemaEl.ownerDocument.documentElement.localName == 'schema')
+		var unqualifiedElements = this.unqualifiedElements;
+		if (schemaEl.ownerDocument.documentElement.localName == 'schema') {
 			targetNamespace = schemaEl.ownerDocument.documentElement.getAttributeNS(null, 'targetNamespace');
+			unqualifiedElements = schemaEl && (schemaEl.getAttributeNS(null, 'elementFormDefault') == 'unqualified');
+		}
+		if (parentEl && unqualifiedElements)
+			targetNamespace = null;
 		elem = new InstanceElement(new XmlQualifiedName(targetNamespace, globalDecl.getAttributeNS(null, 'name')));
 		if (parentEl)
 			parentEl.addChild(elem);
@@ -188,7 +195,7 @@ XmlSampleGenerator.prototype = {
 	isSimpleContent: function(schemaType) {
 		return typeof schemaType == 'string';
 	},
-	
+
 	generateParticle: function(particle, iGrp) {
 		if (!particle)
 			return;
@@ -224,6 +231,13 @@ XmlSampleGenerator.prototype = {
 				this.generateParticle(ch, iGrp);
 			else
 				this.generateElement(particle, iGrp);
+		} else if (particle.localName == 'complexContent') {
+			var pt = this.getChildren(particle, 'extension', 'restriction')[0];
+			if (pt) {
+				var type = this.getSchemaType(pt, 'base');
+				//if (type)
+				//	this.processComplexType(type, ???);
+			}
 		} else if (particle.localName == 'any') {
 			this.generateAny(particle, iGrp);
 		}
@@ -248,13 +262,13 @@ XmlSampleGenerator.prototype = {
 	},
 	
 	getParticles: function(schemaType) {
-		return this.getChildren(schemaType, 'choice', 'sequence', 'all', 'element', 'any');
+		return this.getChildren(schemaType, 'choice', 'sequence', 'all', 'element', 'any', 'complexContent');
 	},
 	
 	getContentTypeParticle: function(schemaType) {
 		return this.getParticles(schemaType)[0];
 	},
-	
+
 	getSimpleDataType: function(schemaType) {
 		if (typeof schemaType == 'string')
 			return schemaType;
