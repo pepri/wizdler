@@ -124,6 +124,16 @@ var App = {
 		editor.setTheme('ace/theme/vs');
 		editor.renderer.setShowGutter(false);
 		editor.getSession().setUseWrapMode(true);
+		editor.commands.addCommands([{
+			name: "ungotoline",
+			bindKey: {
+				mac: "Command-L"
+			},
+			exec: function(editor, line) {
+				return false;
+			},
+			readOnly: true
+		}]);
 		var Mode = require('ace/mode/xml').Mode;
 		editor.getSession().setMode(new Mode);
 		return editor;
