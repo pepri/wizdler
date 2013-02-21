@@ -2,19 +2,8 @@ var ns = {
 	wsdl: 'http://schemas.xmlsoap.org/wsdl/',
 	xhtml: 'http://www.w3.org/1999/xhtml'
 };
-var xmlContent;
-switch (document.documentElement.namespaceURI) {
-	case ns.wsdl:
-		xmlContent = new XMLSerializer().serializeToString(document);
-		break;
-	case ns.xhtml:
-		var xmlSource = document.getElementById('webkit-xml-viewer-source-xml');
-		if (xmlSource)
-			xmlContent = xmlSource.innerHTML;
-		break;
-	default:
-		xmlContent = null;
-}
+
+var xmlContent = getXmlContent();
 
 if (xmlContent) {
 	var parser = new DOMParser;
@@ -28,6 +17,20 @@ if (xmlContent) {
 			command: 'showPageAction'
 		});
 	}
+}
+
+function getXmlContent() {
+	switch (document.documentElement.namespaceURI) {
+		case ns.wsdl:
+			return new XMLSerializer().serializeToString(document);
+		case ns.xhtml:
+			var el;
+			if (el = document.getElementById('webkit-xml-viewer-source-xml'))
+				return el.innerHTML;
+			//if (el = document.querySelector('body>.xv-source-pane'))
+			//	return el.textContent;
+	}
+	return null;
 }
 
 function downloadFile(name, data) {
