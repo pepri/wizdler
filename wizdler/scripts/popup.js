@@ -120,11 +120,19 @@ var App = {
 		return '#/' + requested;
 	},
 
+	// Sorts array of objects by qualified name in the "name" property.
+	sort: function(arr) {
+		arr.sort(function(a, b) {
+			return a.name.local.localeCompare(b.name.local);
+		});
+		return arr;
+	},
+
 	// Appends HTML content (a tree with services, ports and operations).
 	createTree: function(wsdl) {
 		var addresses = new Object;
 		var $servicesUl = $('<ul class="collapsible">')
-		$.each(wsdl.services, function() {
+		$.each(App.sort(wsdl.services), function() {
 			var service = this;
 			var $serviceLi = $('<li>')
 				.append(
@@ -139,7 +147,7 @@ var App = {
 				)
 				.appendTo($servicesUl);
 			var $portsUl = $('<ul class="collapsible">').appendTo($serviceLi);
-			$.each(this.ports, function() {
+			$.each(App.sort(this.ports), function() {
 				var port = this;
 				var $portLi = $('<li>')
 					.append(
@@ -152,7 +160,7 @@ var App = {
 				if (binding) {
 					var portType = wsdl.portTypes[binding.type.full];
 					var $operationsUl = $('<ul class="operations">').appendTo($portLi);
-					$.each(binding.operations, function() {
+					$.each(App.sort(binding.operations), function() {
 						var operation = this;
 						var portTypeOperation = portType.operations[this.name.full];
 						var description = this.description || portTypeOperation.description;
