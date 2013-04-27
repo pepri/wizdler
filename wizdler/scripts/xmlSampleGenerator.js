@@ -29,17 +29,16 @@ XmlValueGenerator.createGenerator = function(dataType, listLength, minOccurs) {
 	};
 };
 
-function XmlSampleGenerator(schema, imports) {
+function XmlSampleGenerator(targetNamespace, schemas, imports) {
 	//if (!schema)
 	//	throw new Error('Schema was not provided. XML cannot be generated.');
-	this.xsd = schema;
+	this.schemas = schemas;
 	this.imports = imports;
 	this.root = null;
 	this.elementTypesProcessed = null;
 	this.instanceElementsProcessed = null;
 	this.listLength = 3;
-	this.targetNamespace = schema ? schema.getAttributeNS(null, 'targetNamespace') : '';
-	this.unqualifiedElements = schema && (schema.getAttributeNS(null, 'elementFormDefault') == 'unqualified');
+	this.targetNamespace = targetNamespace;
 	this.globalElements = this.getGlobalElements();
 	this.globalTypes = this.getGlobalTypes();
 }
@@ -125,6 +124,14 @@ XmlSampleGenerator.prototype = {
 		}
 		delete this.instanceElementsProcessed[elem];
 	},
+
+	findSchemaDocEl: function(el) {
+		var ns = 'http://www.w3.org/2001/XMLSchema';
+		for (var e = el; e; e = e.parentNode)
+			if (e.localName == 'schema' && e.namespaceURI == ns)
+				return e;
+		return null;
+	},
 	
 	generateElement: function(schemaEl, parentEl, any) {
 		var globalDecl = schemaEl;
@@ -141,12 +148,9 @@ XmlSampleGenerator.prototype = {
 				parentEl.addChild(elem.clone(this.getOccurs(minOccurs, maxOccurs)));
 			return null;
 		}
-		var targetNamespace = this.targetNamespace;
-		var unqualifiedElements = this.unqualifiedElements;
-		if (schemaEl.ownerDocument.documentElement.localName == 'schema') {
-			targetNamespace = schemaEl.ownerDocument.documentElement.getAttributeNS(null, 'targetNamespace');
-			unqualifiedElements = schemaEl && (schemaEl.getAttributeNS(null, 'elementFormDefault') == 'unqualified');
-		}
+		var schemaDocEl = this.findSchemaDocEl(schemaEl);
+		var targetNamespace = schemaDocEl.getAttributeNS(null, 'targetNamespace') || this.targetNamespace;
+		var unqualifiedElements = schemaDocEl.getAttributeNS(null, 'elementFormDefault') == 'unqualified';
 		if (parentEl && unqualifiedElements)
 			targetNamespace = null;
 		elem = new InstanceElement(new XmlQualifiedName(targetNamespace, globalDecl.getAttributeNS(null, 'name')));
@@ -341,13 +345,13 @@ XmlSampleGenerator.prototype = {
 	getGlobalElements: function() {
 		var result = new Array;
 		var me = this;
-		if (this.xsd) {
-			var targetNS = this.xsd.getAttributeNS(null, 'targetNamespace');
-			$.each(this.getChildren(me.xsd, 'element'), function() {
+		$.each(this.schemas, function() {
+			var targetNS = this.getAttributeNS(null, 'targetNamespace');
+			$.each(me.getChildren(this, 'element'), function() {
 				var name = this.getAttributeNS(null, 'name');
 				result[targetNS + ':' + name] = this;
 			});
-		}
+		});
 		$.each(this.imports, function() {
 			var importTargetNs = this.namespace || this.XML.documentElement.getAttributeNS(null, 'targetNamespace');
 			$.each(me.getChildren(this.XML.documentElement, 'element'), function() {
@@ -361,13 +365,13 @@ XmlSampleGenerator.prototype = {
 	getGlobalTypes: function() {
 		var result = new Array;
 		var me = this;
-		if (this.xsd) {
-			var targetNS = this.xsd.getAttributeNS(null, 'targetNamespace');
-			$.each(this.getChildren(me.xsd, 'complexType', 'simpleType'), function() {
+		$.each(this.schemas, function() {
+			var targetNS = this.getAttributeNS(null, 'targetNamespace');
+			$.each(me.getChildren(this, 'complexType', 'simpleType'), function() {
 				var name = this.getAttributeNS(null, 'name');
 				result[targetNS + ':' + name] = this;
 			});
-		}
+		});
 		$.each(this.imports, function() {
 			var importTargetNs = this.namespace || this.XML.documentElement.getAttributeNS(null, 'targetNamespace');
 			$.each(me.getChildren(this.XML.documentElement, 'complexType', 'simpleType'), function() {

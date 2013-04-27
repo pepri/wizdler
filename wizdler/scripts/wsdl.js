@@ -258,7 +258,7 @@ Wsdl.prototype = {
 	},
 	
 	// Gets the XSD schema.
-	_getSchema: function() {
+	_getSchemas: function() {
 		// shortcuts
 		var ns = Wsdl.ns;
 		var attr = Wsdl._attr;
@@ -268,8 +268,8 @@ Wsdl.prototype = {
 		// get the schema
 		var xml = this._getXML();
 		var types = child(xml.documentElement, ns.wsdl, 'types');
-		var schema = child(types, ns.schema, 'schema');
-		return schema;
+		var schemas = children(types, ns.schema, 'schema');
+		return schemas;
 	},
 	
 	_getImports: function() {
@@ -354,12 +354,12 @@ Wsdl.prototype = {
 
 		// resolve imports
 		var me = this;
-		var schema = this._getSchema();
+		var schemas = this._getSchemas();
 		var imports = this._getImports();
 
 		this._resolveImports(Wsdl._getDirectory(url), imports, function(imports) {
 			Array.prototype.push.apply(me.imports, imports);
-			me.generator = new XmlSampleGenerator(schema, imports);
+			me.generator = new XmlSampleGenerator(me.targetNamespace, schemas, imports);
 			me._apply(callback, scope, args);
 		});
 	},
@@ -442,6 +442,8 @@ Wsdl.prototype = {
 		var child = Wsdl._child;
 		var parser = new DOMParser;
 		var xml = parser.parseFromString(this.text, 'text/xml');
+
+		this.targetNamespace = xml.documentElement.getAttributeNS(null, 'targetNamespace');
 
 		// message
 		$.each(children(xml.documentElement, ns.wsdl, 'message'), function() {
