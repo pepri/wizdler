@@ -1,4 +1,37 @@
 var App = {
+	ajax: function(config) {
+		var fileProtocol = 'file://';
+		if (config.url.substr(0, fileProtocol.length) == fileProtocol) {
+			chrome.extension.sendRequest({
+				command: 'ajax',
+				url: config.url,
+				type: config.method,
+				contentType: config.contentType,
+				data: config.data,
+				headers: config.headers,
+			}, function(result) {
+				if (config[result.type]) {
+					if (result.type == 'success' && config.dataType == 'xml') {
+						result.args[0] = new DOMParser().parseFromString(result.args[0], 'text/xml');
+					}
+					console.log(config, result);
+					config[result.type].apply(null, result.args);
+				}
+			});
+		} else {
+			if (config.headers) {
+				config.beforeSend = function(xhr) {
+					var headers = config.headers;
+					if (headers)
+						for (var x in headers)
+							if (headers.hasOwnProperty(x))
+								xhr.setRequestHeader(x, headers[x]);
+				};
+			}
+			$.ajax(config);
+		}
+	},
+
 	bind: function(name) {
 		var me = this;
 		return function() {
@@ -82,19 +115,13 @@ var App = {
 		this.request.method = $('#method').val();
 		this.request.body = this.requestEditor.getSession().getValue();
 		e.preventDefault();
-		$.ajax({
+		App.ajax({
 			url: this.request.url,
 			type: this.request.method,
 			contentType: 'text/xml; charset=utf-8',
 			dataType: 'xml',
 			data: this.request.body,
-			beforeSend: function(xhr) {
-				var headers = me.request.headers;
-				if (me.request.headers)
-					for (var x in headers)
-						if (headers.hasOwnProperty(x))
-							xhr.setRequestHeader(x, headers[x]);
-			},
+			headers: me.request.headers,
 			success: function(xml) {
 				var text = new XMLSerializer().serializeToString(xml);
 				me.responseBody = vkbeautify.xml(text);
@@ -191,7 +218,7 @@ var App = {
 		var args = this.parseArgs();
 		if (args.wsdl) {
 			document.title = args.title;
-			$.ajax({
+			App.ajax({
 				url: args.wsdl,
 				dataType: 'text',
 				success: function(data) {

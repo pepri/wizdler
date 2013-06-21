@@ -6,6 +6,7 @@ chrome.extension.onRequest.addListener(
 				chrome.pageAction.show(sender.tab.id);
 				sendResponse();
 				break;
+
 			case 'openEditor':
 				var opts = {
 					url: chrome.extension.getURL('editor.html') +
@@ -21,6 +22,37 @@ chrome.extension.onRequest.addListener(
 					//});
 				});
 				break;
+
+			case 'ajax':
+				var xhr = new XMLHttpRequest;
+				xhr.onreadystatechange = function() {
+					if (xhr.readyState == 4) {
+						if (xhr.status === 200 || xhr.status === 0) {
+							sendResponse({
+								type: 'success',
+								args: [xhr.responseText]
+							});
+						} else {
+							sendResponse({
+								type: 'error'
+							});
+						}
+					}
+				}
+				xhr.open(request.type, request.url, true);
+
+				if (command.contentType)
+					request.setRequestHeader('Content-Type', command.contentType);
+
+				var headers = command.headers;
+				if (headers)
+					for (var x in headers)
+						if (headers.hasOwnProperty(x))
+							xhr.setRequestHeader(x, headers[x]);
+
+				xhr.send(request.data);
+				break;
+
 			default:
 				sendResponse();
 		}
