@@ -150,8 +150,8 @@ XmlSampleGenerator.prototype = {
 		}
 		var schemaDocEl = this.findSchemaDocEl(schemaEl);
 		var targetNamespace = schemaDocEl.getAttributeNS(null, 'targetNamespace') || this.targetNamespace;
-		var unqualifiedElements = schemaDocEl.getAttributeNS(null, 'elementFormDefault') == 'unqualified';
-		if (parentEl && unqualifiedElements)
+		var qualifiedElements = schemaDocEl.getAttributeNS(null, 'elementFormDefault') == 'qualified';
+		if (parentEl && !qualifiedElements)
 			targetNamespace = null;
 		elem = new InstanceElement(new XmlQualifiedName(targetNamespace, globalDecl.getAttributeNS(null, 'name')));
 		if (parentEl)
@@ -174,11 +174,11 @@ XmlSampleGenerator.prototype = {
 				//elem.isMixed = schemaType.isMixed;
 				this.processComplexType(schemaType, elem);
 			} else {
-				schemaType = this.getDerivedType(schemaType);
+				/*schemaType = this.getDerivedType(schemaType);
 				if (schemaType) {
 					//elem.xsiType = new QualifiedName(schemaType);
 					this.processComplexType(schemaType, elem);
-				}
+				}*/
 			}
 		} else { // simpleType
 			var dataType = this.getSimpleDataType(schemaType);
@@ -389,8 +389,9 @@ XmlSampleGenerator.prototype = {
 
 	findGlobalElement: function(qname) {
 		var el = this.globalElements[qname.ns + ':' + qname.localName];
-		if (!el)
+		if (!el) {
 			throw new Error('No global element was found: ' + qname);
+		}
 		return el;
 	},
 	
