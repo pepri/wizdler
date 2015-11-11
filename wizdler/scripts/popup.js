@@ -1,6 +1,11 @@
 var App = {
 	url: null,
 
+	queryCurrentTab: {
+		active: true,
+		currentWindow: true
+	},
+
 	// Initializes expand/collapse images (used in CSS).
 	initializeCanvasImages: function() {
 		var ctx = document.getCSSCanvasContext('2d', 'arrowRight', 10, 10);
@@ -48,8 +53,8 @@ var App = {
 	downloadFile: function(name, data) {
 		// if in extension, the content page must download the file
 		if (chrome.tabs) {
-			chrome.tabs.getSelected(null, function(tab) {
-				chrome.tabs.sendRequest(tab.id, {
+			chrome.tabs.query(this.queryCurrentTab, function(tabs) {
+				chrome.tabs.sendMessage(tabs[0].id, {
 					command: 'download',
 					name: name,
 					data: data
@@ -70,12 +75,12 @@ var App = {
 	getWSDL: function(callback) {
 		// if in extension, the WSDL is retrieved via content page
 		if (chrome.tabs)
-			chrome.tabs.getSelected(null, function(tab) {
-				chrome.tabs.sendRequest(tab.id, { command: 'getXml' }, function(data) {
+			chrome.tabs.query(this.queryCurrentTab, function(tabs) {
+				chrome.tabs.sendMessage(tabs[0].id, { command: 'getXml' }, function(data) {
 					callback(null, data);
 				});
 			});
-		// otherwise, it is downloaded from the specified URL 
+		// otherwise, it is downloaded from the specified URL
 		else
 			$.ajax({
 				url: App.url,
@@ -93,14 +98,14 @@ var App = {
 	// downloading the imported XSD files.
 	getUrl: function(callback) {
 		if (chrome.tabs)
-			chrome.tabs.getSelected(null, function(tab) {
-				callback(tab.url);
+			chrome.tabs.query(this.queryCurrentTab, function(tabs) {
+				callback(tabs[0].url);
 			});
 		else
 			callback(App.url);
 	},
 
-	// Creates a valid filename from the URL.	
+	// Creates a valid filename from the URL.
 	getFilenameFromURL: function(url, ext) {
 		var name = url
 			.substring(url.lastIndexOf('/') + 1)
@@ -190,16 +195,16 @@ var App = {
 		});
 		$servicesUl.find('ul.collapsible>li>ul').parents().addClass('expanded');
 		$servicesUl.appendTo($('#tree'));
-		
+
 		if (chrome.tabs)
 			App.initializeScroller();
 	},
 
 	sendTabRequest: function(request, callback, args) {
 		var me = this;
-		chrome.tabs.getSelected(null, function(tab) {
+		chrome.tabs.query(this.queryCurrentTab, function(tabs) {
 			var doRequest = function() {
-				chrome.tabs.sendRequest(tab.id, request, function(err) {
+				chrome.tabs.sendMessage(tabs[0].id, request, function(err) {
 					console.log(args);
 					if (callback)
 						callback.apply(me, args || new Array);
@@ -214,11 +219,11 @@ var App = {
 		var req = $.extend(opts, {
 			command: 'openEditor'
 		});
-		if (!chrome.extension) {
+		if (!chrome.runtime) {
 			console.log(req);
 			return;
 		}
-		chrome.extension.sendRequest(req);
+		chrome.runtime.sendMessage(req);
 	},
 
 	// Called when WSDL is read.
@@ -231,7 +236,7 @@ var App = {
 			Wsdl.parse(url, data, false, App.createTree);
 		});
 	},
-	
+
 	onListItemClick: function() {
 		var $this = $(this).parent();
 		if ($this.hasClass('collapsed'))
@@ -240,7 +245,7 @@ var App = {
 			$this.removeClass('expanded').addClass('collapsed');
 		return false;
 	},
-	
+
 	generateFilename: function(names, url, ext) {
 		var i = 0;
 		var name = App.getFilenameFromURL(url);
@@ -251,7 +256,7 @@ var App = {
 		names[name + ext] = true;
 		return name + ext;
 	},
-	
+
 	onServiceClick: function(e) {
 		var ctx = $(this).data('ctx');
 		var wsdl = ctx.wsdl;
@@ -278,7 +283,7 @@ var App = {
 			});
 		});
 	},
-	
+
 	onOperationClick: function(e) {
 		e.preventDefault();
 		var ctx = $(this).data('ctx');
@@ -293,13 +298,15 @@ var App = {
 			});
 		});
 	},
-	
+
 	run: function() {
 		this.initializeCanvasImages();
 		$(document).on('click', 'ul.collapsible li>span:first-child', this.onListItemClick);
 		$(document).on('click', 'a[id=wsdl]', this.onServiceClick);
 		$(document).on('click', 'ul.operations>li>a', this.onOperationClick);
-		
+
+		$(document.body).prepend($('<div id="version">').text('v' + chrome.runtime.getManifest().version));
+
 		document.addEventListener('DOMContentLoaded', function() {
 			App.getWSDL(App.onReceiveWSDL);
 		});
@@ -307,4 +314,3 @@ var App = {
 };
 
 App.run();
-

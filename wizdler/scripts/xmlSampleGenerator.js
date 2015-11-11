@@ -19,8 +19,8 @@ XmlQualifiedName.prototype = {
 
 function XmlValueGenerator() {
 };
-XmlValueGenerator.anyGenerator = { generateValue: function() { return 'anyType'; } };
-XmlValueGenerator.anySimpleTypeGenerator = { generateValue: function() { return 'anySimpleType'; } };
+XmlValueGenerator.anyGenerator = { generateValue: function() { return '[anyType]'; } };
+XmlValueGenerator.anySimpleTypeGenerator = { generateValue: function() { return '[anySimpleType]'; } };
 XmlValueGenerator.createGenerator = function(dataType, listLength, minOccurs) {
 	return {
 		generateValue: function() {
@@ -53,6 +53,8 @@ XmlSampleGenerator.prototype = {
 		this.instanceElementsProcessed = new Object;
 		this.instanceElementsProcessed[root] = root;
 		var doc = document.implementation.createDocument(root.qname.ns, root.qname.localName, null);
+		if (root.documentation)
+			doc.insertBefore(doc.createComment(root.documentation), doc.documentElement);
 		//this.processElementAttrs(doc.documentElement, root);
 		//this.processComment(doc.documentElement, root);
 		//this.checkIfMixed(doc.documentElement, root);
@@ -71,9 +73,9 @@ XmlSampleGenerator.prototype = {
 		}
 		return doc;
 	},
-	
+
 	processGroup: function(parentEl, grp) {
-		if (grp instanceof InstanceElement) {
+		if (!grp.isGroup) {
 			this.processElement(parentEl, grp);
 		} else { // it is a group node of sequence or choice
 			if (!grp.isChoice) {
@@ -89,38 +91,48 @@ XmlSampleGenerator.prototype = {
 			}
 		}
 	},
-	
+
 	processElement: function(parentEl, elem) {
 		if (this.instanceElementsProcessed[elem])
 			return;
 		this.instanceElementsProcessed[elem] = elem;
 		var doc = parentEl.ownerDocument;
 		for (var i = 0, n = elem.occurs; i < n; ++i) {
-			// unqualified elements are not preserved in Chrome's XMLSerializer, so do some workaround
-			var el = doc.createElementNS(elem.qname.ns === null ? '\0' : elem.qname.ns, elem.qname.localName);
-			//this.processElementAttrs(el, elem);
-			//this.processComment(el, elem);
-			//this.checkIfMixed(el, elem);
-			if (elem.isNillable) {
-				if (elem.genNil) {
-					this.writeNillable(el);
-					elem.genNil = false;
-					continue;
-				} else
-					elem.genNil = true;
+			if (elem.documentation)
+				parentEl.appendChild(doc.createComment(elem.documentation));
+			if (elem.qname) {
+				if (!elem.valueGenerator && (elem.minOccurs != 1 || elem.maxOccurs != 1)) {
+					if (elem.minOccurs === 0 && elem.maxOccurs === 0)
+						parentEl.appendChild(doc.createComment(' Optional '));
+					else
+						parentEl.appendChild(doc.createComment(' Occurs: ' + elem.minOccurs + ' - ' + elem.maxOccurs + ' '));
+				}
+				// unqualified elements are not preserved in Chrome's XMLSerializer, so do some workaround
+				var el = doc.createElementNS(elem.qname.ns === null ? '\0' : elem.qname.ns, elem.qname.localName);
+				//this.processElementAttrs(el, elem);
+				//this.processComment(el, elem);
+				//this.checkIfMixed(el, elem);
+				if (elem.isNillable) {
+					if (elem.genNil) {
+						this.writeNillable(el);
+						elem.genNil = false;
+						continue;
+					} else
+						elem.genNil = true;
+				}
+				if (elem.valueGenerator != null) {
+					if (elem.isFixed)
+						el.appendChild(doc.createTextNode(elem.fixedValue));
+					else if (elem.hasDefault)
+						el.appendChild(doc.createTextNode(elem.defaultValue));
+					else
+						el.appendChild(doc.createTextNode(elem.valueGenerator.generateValue()));
+				} else {
+					for (var g = elem.child; g; g = g.sibling)
+						this.processGroup(el, g);
+				}
+				parentEl.appendChild(el);
 			}
-			if (elem.valueGenerator != null) {
-				if (elem.isFixed)
-					el.appendChild(doc.createTextNode(elem.fixedValue));
-				else if (elem.hasDefault)
-					el.appendChild(doc.createTextNode(elem.defaultValue));
-				else
-					el.appendChild(doc.createTextNode(elem.valueGenerator.generateValue()));
-			} else {
-				for (var g = elem.child; g; g = g.sibling)
-					this.processGroup(el, g);
-			}
-			parentEl.appendChild(el);
 		}
 		delete this.instanceElementsProcessed[elem];
 	},
@@ -132,12 +144,20 @@ XmlSampleGenerator.prototype = {
 				return e;
 		return null;
 	},
-	
+
 	generateElement: function(schemaEl, parentEl, any) {
 		var globalDecl = schemaEl;
 		var ref = schemaEl.getAttributeNS(null, 'ref');
-		if (ref)
-			globalDecl = this.findGlobalElement(XmlQualifiedName.fromElement(schemaEl, ref));
+		if (ref) {
+			var qname = XmlQualifiedName.fromElement(schemaEl, ref);
+			var globalDecl = this.globalElements[qname.ns + ':' + qname.localName];
+			if (!globalDecl) {
+				if (parentEl) {
+					parentEl.addChild(new CommentElement('Invalid type reference: ' + qname));
+				}
+				return null;
+			}
+		}
 		if (this.isAbstract(globalDecl))
 			return null;
 		var elem = this.elementTypesProcessed[globalDecl.dataIndex];
@@ -159,6 +179,8 @@ XmlSampleGenerator.prototype = {
 		// get minOccurs, maxOccurs alone from the current particle, everything else pick up from globalDecl
 		var minOccurs = this.getMinOccurs(any || schemaEl);
 		var maxOccurs = this.getMinOccurs(any || schemaEl);
+		elem.minOccurs = minOccurs;
+		elem.maxOccurs = maxOccurs;
 		var occurs = this.getOccurs(minOccurs, maxOccurs);
 		var defaultValue = globalDecl.getAttributeNS(null, 'default');
 		var fixedValue = globalDecl.getAttributeNS(null, 'fixed');
@@ -184,9 +206,10 @@ XmlSampleGenerator.prototype = {
 			var dataType = this.getSimpleDataType(schemaType);
 			elem.valueGenerator = XmlValueGenerator.createGenerator(dataType, this.listLength, minOccurs);
 		}
+		elem.documentation = this.getDocumentation(schemaEl, globalDecl, this.isComplexType(schemaType) ? schemaType : null);
 		return elem;
 	},
-	
+
 	processComplexType: function(schemaType, elem) {
 		if (this.isSimpleContent(schemaType)) {
 			var dataType = this.getSimpleDataType(schemaType);
@@ -195,7 +218,7 @@ XmlSampleGenerator.prototype = {
 			this.generateParticle(this.getContentTypeParticle(schemaType), elem);
 		}
 	},
-	
+
 	isSimpleContent: function(schemaType) {
 		return typeof schemaType == 'string';
 	},
@@ -203,14 +226,16 @@ XmlSampleGenerator.prototype = {
 	generateParticle: function(particle, iGrp) {
 		if (!particle)
 			return;
-			
+
 		var max = this.getMaxOccurs(particle);
 		var min = this.getMinOccurs(particle);
 		var occurs = this.getOccurs(min, max);
-		
+
 		if (particle.localName == 'sequence') {
 			var grp = new InstanceGroup();
 			grp.occurs = occurs;
+			grp.minOccurs = min;
+			grp.maxOccurs = max;
 			iGrp.addChild(grp);
 			this.generateGroupBase(particle, grp);
 		} else if (particle.localName == 'choice') {
@@ -220,6 +245,8 @@ XmlSampleGenerator.prototype = {
 			} else {
 				var grp = new InstanceGroup();
 				grp.occurs = occurs;
+				grp.minOccurs = min;
+				grp.maxOccurs = max;
 				grp.isChoice = true;
 				iGrp.addChild(grp);
 				this.generateGroupBase(particle, grp);
@@ -239,21 +266,22 @@ XmlSampleGenerator.prototype = {
 			var pt = this.getChildren(particle, 'extension', 'restriction')[0];
 			if (pt) {
 				var type = this.getSchemaType(pt, 'base');
-				//if (type)
-				//	this.processComplexType(type, ???);
+				if (type)
+					this.processComplexType(type, iGrp);
+				this.processComplexType(pt, iGrp);
 			}
 		} else if (particle.localName == 'any') {
 			this.generateAny(particle, iGrp);
 		}
 	},
-	
+
 	generateGroupBase: function(gBase, group) {
 		var me = this;
 		$.each(this.getParticles(gBase), function() {
 			me.generateParticle(this, group);
 		});
 	},
-	
+
 	generateAll: function(gBase, group) {
 		var me = this;
 		$.each(this.getParticles(gBase), function() {
@@ -261,14 +289,14 @@ XmlSampleGenerator.prototype = {
 		});
 	},
 
-	generateAny: function() {
-		// TODO: implementation
+	generateAny: function(gBase, group) {
+		group.addChild(new CommentElement('Any elements'));
 	},
-	
+
 	getParticles: function(schemaType) {
 		return this.getChildren(schemaType, 'choice', 'sequence', 'all', 'element', 'any', 'complexContent');
 	},
-	
+
 	getContentTypeParticle: function(schemaType) {
 		return this.getParticles(schemaType)[0];
 	},
@@ -295,11 +323,11 @@ XmlSampleGenerator.prototype = {
 		});
 		return result;
 	},
-	
+
 	isComplexType: function(schemaType) {
-		return schemaType.localName == 'complexType';
+		return schemaType != null && schemaType.localName == 'complexType';
 	},
-	
+
 	getSchemaType: function(el, attrName) {
 		var type = el.getAttributeNS(null, attrName);
 		if (type) {
@@ -315,11 +343,26 @@ XmlSampleGenerator.prototype = {
 		var schemaTypes = this.getChildren(el, 'complexType', 'simpleType');
 		return schemaTypes[0];
 	},
-	
+
+	getDocumentation: function() {
+		var documentation = new Array;
+		var me = this;
+		for (var i = 0, n = arguments.length; i < n; ++i) {
+			if (arguments[i] && arguments[i] != arguments[i - 1]) {
+				$.each(me.getChildren(arguments[i], 'annotation'), function() {
+					$.each(me.getChildren(this, 'documentation'), function() {
+						documentation.push(this.textContent);
+					});
+				});
+			}
+		}
+		return documentation.length ? documentation.join('\n') : undefined;
+	},
+
 	getOccurs: function(minOccurs, maxOccurs) {
 		return minOccurs;
 	},
-	
+
 	getMinOccurs: function(el) {
 		var value = el.getAttributeNS(null, 'minOccurs');
 		if (!value)
@@ -329,7 +372,7 @@ XmlSampleGenerator.prototype = {
 			return 1;
 		return value;
 	},
-	
+
 	getMaxOccurs: function(el) {
 		var value = el.getAttributeNS(null, 'maxOccurs');
 		if (!value)
@@ -341,7 +384,7 @@ XmlSampleGenerator.prototype = {
 			return 1;
 		return value;
 	},
-	
+
 	getGlobalElements: function() {
 		var result = new Array;
 		var me = this;
@@ -387,14 +430,6 @@ XmlSampleGenerator.prototype = {
 		return null;
 	},
 
-	findGlobalElement: function(qname) {
-		var el = this.globalElements[qname.ns + ':' + qname.localName];
-		if (!el) {
-			throw new Error('No global element was found: ' + qname);
-		}
-		return el;
-	},
-	
 	findGlobalType: function(qname) {
 		var el = this.globalTypes[qname.ns + ':' + qname.localName];
 		if (!el)
@@ -405,7 +440,10 @@ XmlSampleGenerator.prototype = {
 
 	findRootSchemaElement: function(root) {
 		if (root) {
-			var el = this.findGlobalElement(new XmlQualifiedName(root.ns, root.local));
+			var rootName = new XmlQualifiedName(root.ns, root.local);
+			var el = this.globalElements[rootName.ns + ':' + rootName.localName]
+			if (!el)
+				throw new Error('No global element for root was found: ' + rootName);
 		} else {
 			for (var x in this.globalElements)
 				if (this.globalElements.hasOwnProperty(x))
@@ -420,12 +458,12 @@ XmlSampleGenerator.prototype = {
 			throw new Error('Root element type is abstract.');
 		return el;
 	},
-	
+
 	isAbstract: function(el) {
 		var isAbstract = el.getAttributeNS(null, 'abstract');
 		return isAbstract == 'true' || isAbstract == '1';
 	},
-	
+
 	getChildren: function(el, _) {
 		var ns = 'http://www.w3.org/2001/XMLSchema';
 		var children = el.childNodes;
@@ -442,21 +480,15 @@ XmlSampleGenerator.prototype = {
 };
 
 define({
-	constructor: function InstanceObject() {
-	}
-});
-
-define({
 	constructor: function InstanceAttribute() {
-	},
-	prototype: new InstanceObject
+	}
 });
 
 define({
 	constructor: function InstanceGroup() {
 	},
-	prototype: new InstanceObject,
 	occurs: 1,
+	isGroup: true,
 	isChoice: false,
 	parent: null,
 	sibling: null,
@@ -481,10 +513,24 @@ define({
 	constructor: function InstanceElement(qname) {
 		this.id = ++InstanceElement.id;
 		this.qname = qname;
+		this.minOccurs = 1;
+		this.maxOccurs = 1;
 	},
 	prototype: new InstanceGroup,
 	static: {
 		id: 0
+	},
+	isGroup: false,
+	clone: function(occurs) {
+		var newElem = new InstanceElement();
+		for (var x in this)
+			if (this.hasOwnProperty(x))
+				newElem[x] = this[x];
+		newElem.occurs = occurs;
+		newElem.child = null;
+		newElem.parent = null;
+		newElem.sibling = null;
+		return newElem;
 	},
 	toString: function() {
 		return this.constructor.name + this.id;
@@ -494,6 +540,21 @@ define({
 	genNil: true,
 	xsiType: null,
 	firstAttribute: null
+});
+
+define({
+	constructor: function CommentElement(text) {
+		this.id = ++CommentElement.id;
+		this.documentation = ' ' + text + ' ';
+	},
+	prototype: InstanceElement,
+	static: {
+		id: 0
+	},
+	occurs: 1,
+	toString: function() {
+		return this.constructor.name + this.id;
+	},
 });
 
 function define(name, props) {
@@ -508,7 +569,7 @@ function define(name, props) {
 		ctor = props.constructor;
 		delete props.constructor;
 	} else
-		ctor = new Function;
+		ctor = function () {};
 	if (props.hasOwnProperty('prototype')) {
 		proto = props.prototype;
 		delete props.prototype;
