@@ -518,6 +518,20 @@ var App = {
 			$(document.body).addClass('platform-win32');
 		var me = this;
 		$('#go').click(this.bind('onGoClick'));
+
+		var that = this;
+		$('#request').keypress(function(event){
+			if (event.ctrlKey && (event.keyCode == 13 || event.keyCode == 10)) {
+				that.onGoClick(event);
+			}
+		});
+
+        $('#response').keypress(function(event){
+            if (event.ctrlKey && (event.keyCode == 13 || event.keyCode == 10)) {
+                that.onGoClick(event);
+            }
+        });
+
 		$('a[href=#request]').click(this.bind('onShowRequestClick'));
 		$('a[href=#response]').click(this.bind('onShowResponseClick'));
 		$('a[href=#exit]').click(this.bind('onExitClick'));
