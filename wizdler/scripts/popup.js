@@ -6,29 +6,6 @@ var App = {
 		currentWindow: true
 	},
 
-	// Initializes expand/collapse images (used in CSS).
-	initializeCanvasImages: function() {
-		var ctx = document.getCSSCanvasContext('2d', 'arrowRight', 10, 10);
-		ctx.fillStyle = 'rgb(90,90,90)';
-		ctx.beginPath();
-		ctx.moveTo(0, 0);
-		ctx.lineTo(0, 8);
-		ctx.lineTo(7, 4);
-		ctx.lineTo(0, 0);
-		ctx.fill();
-		ctx.closePath();
-
-		var ctx = document.getCSSCanvasContext('2d', 'arrowDown', 10, 10);
-		ctx.fillStyle = 'rgb(90,90,90)';
-		ctx.beginPath();
-		ctx.moveTo(0, 0);
-		ctx.lineTo(8, 0);
-		ctx.lineTo(4, 7);
-		ctx.lineTo(0, 0);
-		ctx.fill();
-		ctx.closePath();
-	},
-
 	// Initializes scroller.
 	initializeScroller: function() {
 		$('body').addClass('scroller');
@@ -141,14 +118,21 @@ var App = {
 			var service = this;
 			var $serviceLi = $('<li>')
 				.append(
-					$('<span>').append(
-						$('<a id="wsdl">')
-							.attr('href', App.address(addresses, 'download'))
-							.text(this.name.local)
-							.data('ctx', {
-								wsdl: wsdl,
-								service: service
-							}))
+					$('<div>').append(
+						$('<a href="#">')
+							.css('color', 'black')
+							.addClass('toggle-button')
+							.html($('<i>').addClass('fa fa-arrow-down')),
+						'&nbsp;',
+						$('<span>').append(
+							$('<a id="wsdl">')
+								.attr('href', App.address(addresses, 'download'))
+								.text(this.name.local)
+								.data('ctx', {
+									wsdl: wsdl,
+									service: service
+								}))
+					)
 				)
 				.appendTo($servicesUl);
 			var $portsUl = $('<ul class="collapsible">').appendTo($serviceLi);
@@ -156,8 +140,15 @@ var App = {
 				var port = this;
 				var $portLi = $('<li>')
 					.append(
-						$('<span>')
-							.text(this.name.local)
+						$('<div>').append(
+							$('<a href="#">')
+								.css('color', 'black')
+								.addClass('toggle-button')
+								.html($('<i>').addClass('fa fa-arrow-down')),
+							'&nbsp;',
+							$('<span>')
+								.text(this.name.local)
+						)
 					)
 					.prop('title', this.description)
 					.appendTo($portsUl);
@@ -238,11 +229,19 @@ var App = {
 	},
 
 	onListItemClick: function() {
-		var $this = $(this).parent();
-		if ($this.hasClass('collapsed'))
+		var $this = $(this).closest('li');
+		if ($this.hasClass('collapsed')) {
 			$this.removeClass('collapsed').addClass('expanded');
-		else if ($this.hasClass('expanded'))
+			$this.find('i.fa')
+				.removeClass('fa-arrow-right')
+				.addClass('fa-arrow-down');
+		} else if ($this.hasClass('expanded')) {
 			$this.removeClass('expanded').addClass('collapsed');
+			$this.find('i.fa')
+				.addClass('fa-arrow-right')
+				.removeClass('fa-arrow-down');
+		}
+
 		return false;
 	},
 
@@ -300,8 +299,7 @@ var App = {
 	},
 
 	run: function() {
-		this.initializeCanvasImages();
-		$(document).on('click', 'ul.collapsible li>span:first-child', this.onListItemClick);
+		$(document).on('click', '.toggle-button', this.onListItemClick);
 		$(document).on('click', 'a[id=wsdl]', this.onServiceClick);
 		$(document).on('click', 'ul.operations>li>a', this.onOperationClick);
 
