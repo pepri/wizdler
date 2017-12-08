@@ -4,9 +4,16 @@ function(require, exports, module){
 exports.cssClass = 'ace-vs';
 exports.cssText = "\
 .ace-vs.ace_editor, .ace-vs .ace_text-layer {\
-  font-family: Consolas;\
+  font-size: 14px;\
+  line-height: 16px;\
+}\
+.platform-win32 .ace-vs.ace_editor, .platform-win32 .ace-vs .ace_text-layer {\
   font-size: 13px;\
   line-height: 16px;\
+}\
+.platform-mac .ace-vs.ace_editor, .platform-mac .ace-vs .ace_text-layer {\
+  font-size: 12px;\
+  line-height: normal;\
 }\
 \
 .ace-vs .ace_editor.ace_focus {\
