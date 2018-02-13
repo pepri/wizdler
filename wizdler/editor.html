@@ -6,7 +6,7 @@
 	<link rel="stylesheet" href="stylesheets/bootstrap-responsive.css" />
 	<link rel="stylesheet" href="stylesheets/editor.css" />
 </head><body>
-	<div class="subnav address-bar">
+	<div id="header">
 		<select id="method">
 			<option>POST</option>
 			<option>GET</option>
@@ -15,19 +15,53 @@
 			<option>DELETE</option>
 			<option>OPTIONS</option>
 		</select>
-		<div class="input-append dropdown">
+		<span class="input-append dropdown">
 			<input type="text" id="address" spellcheck="false" autocorrect="off" size="80" />
 			<input id="go" type="button" value="Go" class="btn" />
 			<span class="btn dropdown-toggle" data-toggle="x-dropdown"><span class="caret"></span></span>
 			<ul class="dropdown-menu">
+				<li><a href="#headers"><i class="icon-"></i> HTTP headers</a></li>
+				<li class="divider-after"><a href="#authenticate"><i class="icon-"></i> Authentication</a></li>
+				<li><a href="#remember"><i class="icon-"></i> Remember</a></li>
+				<li class="divider-after"><a href="#reset"><i class="icon-asterisk"></i> Reset</a></li>
 				<li><a href="#exit"><i class="icon-off"></i> Exit</a></li>
 			</ul>
-		</div>
+		</span>
 	</div>
-	<div class="tabbable tabs-below">
+	<div id="content" class="tabbable tabs-below">
 		<div class="tab-content">
-			<div id="request" class="tab-pane active editor"></div>
-			<div id="response" class="tab-pane editor"></div>
+			<div id="request" class="tab-pane active">
+				<div class="editor-top">
+					<div class="headers-editor">
+						<textarea id="request-headers" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+					</div>
+					<div id="authentication">
+						<select id="auth-type">
+							<option value="http-basic">HTTP Basic Authentication</option>
+							<option value="wsse-passwordtext">WSSE PasswordText Authentication</option>
+							<option value="wsse-passworddigest">WSSE Digest Authentication</option>
+						</select>
+						Username:
+						<input id="auth-username" />
+						Password:
+						<input id="auth-password" type="password" />
+						<!--a href="#" class="btn">Apply</a-->
+					</div>
+				</div>
+				<div class="flex-fill">
+					<div id="request-editor" class="fill editor"></div>
+				</div>
+			</div>
+			<div id="response" class="tab-pane">
+				<div class="editor-top">
+					<div class="headers-editor">
+						<textarea id="response-headers" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+					</div>
+				</div>
+				<div class="flex-fill">
+					<div id="response-editor" class="fill editor"></div>
+				</div>
+			</div>
 		</div>
 		<ul class="nav nav-tabs">
 			<li class="active"><a href="#request">Request</a></li>
@@ -37,7 +71,7 @@
 	</div>
 	<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank" class="paypal">
 		<input type="hidden" name="cmd" value="_s-xclick" />
-		<input type="hidden" name="item_name" value="Service Tester Chrome Extension" />
+		<input type="hidden" name="item_name" value="Wizdler Chrome Extension" />
 		<input type="hidden" name="hosted_button_id" value="MKTC4AH2VLWDE" />
 		<input type="image" src="images/paypal.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!" />
 	</form>
@@ -45,10 +79,14 @@
 	<script src="scripts/ace/ace.js"></script>
 	<script src="scripts/ace/theme-vs.js"></script>
 	<script src="scripts/ace/mode-xml.js"></script>
+	<script src="scripts/ace/ext-searchbox.js"></script>
+	<script src="scripts/ace/ext-settings_menu.js"></script>
 	<script src="scripts/bootstrap-dropdown.js"></script>
 	<script src="scripts/bootstrap-tab.js"></script>
 	<script src="scripts/vkbeautify.js"></script>
 	<script src="scripts/xmlSampleGenerator.js"></script>
 	<script src="scripts/wsdl.js"></script>
+	<script src="scripts/sha1.js"></script>
+	<script src="scripts/enc-base64-min.js"></script>
 	<script src="scripts/editor.js"></script>
 </body></html>

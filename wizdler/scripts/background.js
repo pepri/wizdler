@@ -1,4 +1,4 @@
-chrome.extension.onRequest.addListener(
+chrome.runtime.onMessage.addListener(
 	function(request, sender, sendResponse) {
 		var command = request && request.command;
 		switch (command) {
@@ -9,15 +9,15 @@ chrome.extension.onRequest.addListener(
 
 			case 'openEditor':
 				var opts = {
-					url: chrome.extension.getURL('editor.html') +
+					url: chrome.runtime.getURL('editor.html') +
 						'#wsdl=' + encodeURIComponent(request.url) +
 						'&addr=' + encodeURIComponent(request.address) +
 						'&title=' + encodeURIComponent(request.title)
 				};
 				chrome.tabs.create(opts, function(tab) {
-					// TODO: send resources, so it does not need to redownload 
+					// TODO: send resources, so it does not need to redownload
 					// (only for the first time; after pressing F5, we want to redownload)
-					//chrome.tabs.sendRequest(tab.id, request, function() {
+					//chrome.tabs.sendMessage(tab.id, request, function() {
 					//	sendResponse();
 					//});
 				});
@@ -51,7 +51,7 @@ chrome.extension.onRequest.addListener(
 							xhr.setRequestHeader(x, headers[x]);
 
 				xhr.send(request.data);
-				break;
+				return true;
 
 			default:
 				sendResponse();

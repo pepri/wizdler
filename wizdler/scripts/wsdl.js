@@ -47,7 +47,7 @@ Wsdl.parse = function(url, text, loadSchema, callback, scope) {
 	return wsdl;
 };
 
-// Formatters.	
+// Formatters.
 Wsdl.format = {
 	// Formats the document as XML message.
 	xml: function(doc) {
@@ -64,12 +64,20 @@ Wsdl._generateSoapMessage = function(ctx, soapVersion) {
 	// SOAP headers
 	var headers = ctx.operation.input[soapVersion].headers;
 	if (headers.length) {
-		var hdr = doc.createElementNS(ns, 'Header');
-		doc.documentElement.appendChild(hdr);
+		var headerEl = doc.createElementNS(ns, 'Header');
+		doc.documentElement.appendChild(headerEl);
 		for (var i = 0, n = headers.length; i < n; ++i) {
-			var message = ctx.wsdl.messages[headers[i].message.full];
-			var el = ctx.wsdl.generator.writeXml(message.parts[0].element).documentElement;
-			hdr.appendChild(doc.importNode(el));
+			var header = headers[i];
+			var message = ctx.wsdl.messages[header.message.full];
+			for (var j = 0, m = message.parts.length; j < m; ++j) {
+				var part = message.parts[j];
+				if (part.name == header.parts) {
+					var el = ctx.wsdl.generator.writeXml(part.element);
+					for (var c = 0; c < el.childNodes.length; ++c)
+						headerEl.appendChild(doc.importNode(el.childNodes[c], true));
+					break;
+				}
+			}
 		}
 	}
 
@@ -94,8 +102,10 @@ Wsdl._generateSoapMessage = function(ctx, soapVersion) {
 		for (var i = 0, n = message.parts.length; i < n; ++i) {
 			var part = message.parts[i];
 			if (part.name == body.parts) {
-				var el = ctx.wsdl.generator.writeXml(part.element).documentElement;
-				bodyEl.appendChild(doc.importNode(el));
+				var el = ctx.wsdl.generator.writeXml(part.element);
+				for (var c = 0; c < el.childNodes.length; ++c)
+					bodyEl.appendChild(doc.importNode(el.childNodes[c], true));
+				break;
 			}
 		}
 	}
@@ -115,7 +125,7 @@ Wsdl.generateRequest = function(ctx) {
 		if (ctx.operation.soap12) {
 			request.url = ctx.port.soap12.address;
 			if (ctx.operation.soap12.hasOwnProperty('action')) {
-			    request.headers['SOAPAction'] = ctx.operation.soap12.action;
+			    request.headers['SOAPAction'] = '"' + ctx.operation.soap12.action + '"';
 			    request.headers['Content-Type'] = 'application/soap+xml; charset="utf-8"';
 			}
 			try {
@@ -126,7 +136,7 @@ Wsdl.generateRequest = function(ctx) {
 		} else if (ctx.operation.soap) {
 			request.url = ctx.port.soap.address;
 			if (ctx.operation.soap.hasOwnProperty('action')) {
-			    request.headers['SOAPAction'] = ctx.operation.soap.action;
+			    request.headers['SOAPAction'] = '"' + ctx.operation.soap.action + '"';
 			    request.headers['Content-Type'] = 'text/xml; charset="utf-8"';
 			}
 			try {
@@ -189,40 +199,40 @@ Wsdl._resolveNS = function(node, name) {
 Wsdl.prototype = {
 	// The URL of the WSDL.
 	url: null,
-	
+
 	// The XML that represents the WSDL as text.
 	text: null,
-	
+
 	// The XML that represents the WSDL as XML document.
 	_XML: null,
 
 	// Messages of the web service.
 	messages: null,
-	
+
 	// Port types of the web service.
 	portTypes: null,
-	
+
 	// Bindings of the web service.
 	bindings: null,
-	
+
 	// Services of the web service.
 	services: null,
-	
+
 	// Imports of the web service.
 	imports: null,
 
 	// All web resources downloaded.
 	resources: null,
-	
+
 	// Indicates whether the XML text was parsed.
 	_parsed: false,
 
 	// Indicates whether all related XSD schemas were loaded and parsed.
 	_loaded: false,
-	
+
 	// The XML sample generator.
 	generator: null,
-	
+
 	// Helper for downloading WSDL-related resources.
 	_ajax: function(options, callback) {
 		var url = options.url;
@@ -240,14 +250,14 @@ Wsdl.prototype = {
 			}
 		}));
 	},
-	
+
 	// Calls the function.
 	_apply: function(callback, scope, args) {
 		if (!callback)
 			return;
 		callback.apply(scope || this, args);
 	},
-	
+
 	// Gets the WSDL as XML document.
 	_getXML: function() {
 		if (!this._XML) {
@@ -256,7 +266,7 @@ Wsdl.prototype = {
 		}
 		return this._XML;
 	},
-	
+
 	// Gets the XSD schema.
 	_getSchemas: function() {
 		// shortcuts
@@ -271,14 +281,14 @@ Wsdl.prototype = {
 		var schemas = children(types, ns.schema, 'schema');
 		return schemas;
 	},
-	
+
 	_getImports: function() {
 		// shortcuts
 		var ns = Wsdl.ns;
 		var attr = Wsdl._attr;
 		var children = Wsdl._children;
 		var child = Wsdl._child;
-		
+
 		var result = new Array;
 		var push = Array.prototype.push;
 
@@ -292,7 +302,7 @@ Wsdl.prototype = {
 
 		return result;
 	},
-	
+
 	// Resolves import. Overrride this to cache imports or to modify URL.
 	_resolveImport: function(baseURL, location, ns, callback) {
 		if (!location) {
@@ -317,7 +327,7 @@ Wsdl.prototype = {
 	_resolveImports: function(baseURL, imports, callback) {
 		var result = new Array;
 
-		// there are no imports to resolve		
+		// there are no imports to resolve
 		if (!imports.length) {
 			callback(result);
 			return;
@@ -339,10 +349,10 @@ Wsdl.prototype = {
 		}
 	},
 
-	// Parses the schema from the WSDL.	
+	// Parses the schema from the WSDL.
 	_parseSchema: function(url, callback, scope, args) {
 		scope = scope || this;
-		
+
 		// if already loaded, just call the callback
 		if (this._loaded) {
 			this._apply(callback, scope, args);
@@ -364,7 +374,7 @@ Wsdl.prototype = {
 		});
 	},
 
-	// Parses the SOAP input or output element.	
+	// Parses the SOAP input or output element.
 	_parseSoapInputOrOutput: function(io, soapNs) {
 		// shortcuts
 		var ns = Wsdl.ns;
@@ -408,7 +418,7 @@ Wsdl.prototype = {
 		return result;
 	},
 
-	// Parses the HTTP input or output element.	
+	// Parses the HTTP input or output element.
 	_parseHttpInputOrOutput: function(io) {
 		// shortcuts
 		var ns = Wsdl.ns;
@@ -421,10 +431,10 @@ Wsdl.prototype = {
 		return result;
 	},
 
-	// Parses the WSDL.	
+	// Parses the WSDL.
 	_parseWSDL: function(url, callback, scope) {
 		scope = scope || this;
-		
+
 		// if already parsed, just call the callback
 		if (this._parsed) {
 			this._apply(callback, scope);
@@ -433,7 +443,7 @@ Wsdl.prototype = {
 
 		// mark as parsed
 		this._parsed = true;
-		
+
 		// shortcuts
 		var me = this;
 		var ns = Wsdl.ns;
@@ -506,7 +516,7 @@ Wsdl.prototype = {
 				binding.http = {
 					verb: attr(httpBinding, 'verb')
 				};
-			
+
 			// binding/operation
 			$.each(children(this, ns.wsdl, 'operation'), function() {
 				var operation = {
