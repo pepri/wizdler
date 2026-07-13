@@ -2,7 +2,7 @@ var App = {
 	ajax: function(config) {
 		var fileProtocol = 'file://';
 		if (config.url.substr(0, fileProtocol.length) == fileProtocol) {
-			chrome.extension.sendRequest({
+			chrome.runtime.sendMessage({
 				command: 'ajax',
 				url: config.url,
 				type: config.method,

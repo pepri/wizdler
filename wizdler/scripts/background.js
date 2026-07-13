@@ -1,57 +1,69 @@
-chrome.extension.onRequest.addListener(
+// The action icon behaves like the old page action: disabled everywhere until a
+// content script reports it found a WSDL document in its tab.
+chrome.runtime.onInstalled.addListener(function() {
+	chrome.action.disable();
+});
+
+chrome.runtime.onStartup.addListener(function() {
+	chrome.action.disable();
+});
+
+// Tab-specific enable state survives navigation, so reset it when the tab starts
+// loading a new document.
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo) {
+	if (changeInfo.status === 'loading')
+		chrome.action.disable(tabId);
+});
+
+function ajax(request, sendResponse) {
+	var options = {
+		method: request.type || 'GET',
+		headers: request.headers ? Object.assign({}, request.headers) : {}
+	};
+	if (request.contentType)
+		options.headers['Content-Type'] = request.contentType;
+	if (request.data)
+		options.body = request.data;
+
+	fetch(request.url, options).then(function(response) {
+		if (!response.ok)
+			throw new Error('Request failed with status ' + response.status);
+		return response.text();
+	}).then(function(text) {
+		sendResponse({
+			type: 'success',
+			args: [text]
+		});
+	}).catch(function() {
+		sendResponse({
+			type: 'error'
+		});
+	});
+}
+
+chrome.runtime.onMessage.addListener(
 	function(request, sender, sendResponse) {
 		var command = request && request.command;
 		switch (command) {
 			case 'showPageAction':
-				chrome.pageAction.show(sender.tab.id);
+				chrome.action.enable(sender.tab.id);
 				sendResponse();
 				break;
 
 			case 'openEditor':
 				var opts = {
-					url: chrome.extension.getURL('editor.html') +
+					url: chrome.runtime.getURL('editor.html') +
 						'#wsdl=' + encodeURIComponent(request.url) +
 						'&addr=' + encodeURIComponent(request.address) +
 						'&title=' + encodeURIComponent(request.title)
 				};
-				chrome.tabs.create(opts, function(tab) {
-					// TODO: send resources, so it does not need to redownload 
-					// (only for the first time; after pressing F5, we want to redownload)
-					//chrome.tabs.sendRequest(tab.id, request, function() {
-					//	sendResponse();
-					//});
-				});
+				chrome.tabs.create(opts);
+				sendResponse();
 				break;
 
 			case 'ajax':
-				var xhr = new XMLHttpRequest;
-				xhr.onreadystatechange = function() {
-					if (xhr.readyState == 4) {
-						if (xhr.status === 200 || xhr.status === 0) {
-							sendResponse({
-								type: 'success',
-								args: [xhr.responseText]
-							});
-						} else {
-							sendResponse({
-								type: 'error'
-							});
-						}
-					}
-				}
-				xhr.open(request.type, request.url, true);
-
-				if (command.contentType)
-					request.setRequestHeader('Content-Type', command.contentType);
-
-				var headers = command.headers;
-				if (headers)
-					for (var x in headers)
-						if (headers.hasOwnProperty(x))
-							xhr.setRequestHeader(x, headers[x]);
-
-				xhr.send(request.data);
-				break;
+				ajax(request, sendResponse);
+				return true;
 
 			default:
 				sendResponse();

@@ -10,10 +10,8 @@ if (xmlContent) {
 	var doc = parser.parseFromString(xmlContent, 'text/xml');
 	var root = doc.documentElement;
 	if (root.namespaceURI == ns.wsdl && root.localName == 'definitions') {
-		if (!chrome.extension)
-			return;
-		chrome.extension.onRequest.addListener(onRequest);
-		chrome.extension.sendRequest({
+		chrome.runtime.onMessage.addListener(onMessage);
+		chrome.runtime.sendMessage({
 			command: 'showPageAction'
 		});
 	}
@@ -42,7 +40,7 @@ function downloadFile(name, data) {
 	a.dispatchEvent(ev);
 }
 
-function onRequest(request, sender, sendResponse) {
+function onMessage(request, sender, sendResponse) {
 	switch (request.command) {
 		case 'getXml':
 			sendResponse(xmlContent);
