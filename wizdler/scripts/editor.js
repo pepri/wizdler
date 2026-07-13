@@ -161,8 +161,11 @@ var App = {
 			},
 			readOnly: true
 		}]);
-		var Mode = require('ace/mode/xml').Mode;
-		editor.getSession().setMode(new Mode);
+		var session = editor.getSession();
+		// the XML worker would only feed the gutter, which is hidden, and MV3
+		// forbids the blob: worker Ace builds by default
+		session.setUseWorker(false);
+		session.setMode('ace/mode/xml');
 		return editor;
 	},
 
