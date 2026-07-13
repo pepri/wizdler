@@ -151,6 +151,10 @@ Wsdl._attr = function(element, name, ns) {
 
 // Gets child elements by tag name with specified namespace.
 Wsdl._children = function(element, ns, tagName) {
+	// RPC-style WSDLs carry their types on the message parts and may have no
+	// <types> element at all, so the parent is not guaranteed to exist
+	if (!element)
+		return [];
 	var children = element.childNodes;
 	var result = [];
 	for (var i = 0, n = children.length; i < n; ++i) {
