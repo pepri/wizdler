@@ -6,7 +6,7 @@ exports.isDark = false;
 exports.cssClass = 'ace-vs';
 exports.cssText = "\
 .ace-vs.ace_editor, .ace-vs .ace_text-layer {\
-  font-family: Consolas;\
+  font-family: Consolas, Menlo, Monaco, 'Courier New', monospace;\
   font-size: 13px;\
   line-height: 16px;\
 }\
