@@ -2,7 +2,7 @@ var App = {
 	ajax: function(config) {
 		var fileProtocol = 'file://';
 		if (config.url.substr(0, fileProtocol.length) == fileProtocol) {
-			chrome.extension.sendRequest({
+			chrome.runtime.sendMessage({
 				command: 'ajax',
 				url: config.url,
 				type: config.method,
@@ -161,8 +161,11 @@ var App = {
 			},
 			readOnly: true
 		}]);
-		var Mode = require('ace/mode/xml').Mode;
-		editor.getSession().setMode(new Mode);
+		var session = editor.getSession();
+		// the XML worker would only feed the gutter, which is hidden, and MV3
+		// forbids the blob: worker Ace builds by default
+		session.setUseWorker(false);
+		session.setMode('ace/mode/xml');
 		return editor;
 	},
 

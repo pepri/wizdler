@@ -69,7 +69,7 @@ Wsdl._generateSoapMessage = function(ctx, soapVersion) {
 		for (var i = 0, n = headers.length; i < n; ++i) {
 			var message = ctx.wsdl.messages[headers[i].message.full];
 			var el = ctx.wsdl.generator.writeXml(message.parts[0].element).documentElement;
-			hdr.appendChild(doc.importNode(el));
+			hdr.appendChild(doc.importNode(el, true));
 		}
 	}
 
@@ -95,7 +95,7 @@ Wsdl._generateSoapMessage = function(ctx, soapVersion) {
 			var part = message.parts[i];
 			if (part.name == body.parts) {
 				var el = ctx.wsdl.generator.writeXml(part.element).documentElement;
-				bodyEl.appendChild(doc.importNode(el));
+				bodyEl.appendChild(doc.importNode(el, true));
 			}
 		}
 	}
@@ -151,6 +151,10 @@ Wsdl._attr = function(element, name, ns) {
 
 // Gets child elements by tag name with specified namespace.
 Wsdl._children = function(element, ns, tagName) {
+	// RPC-style WSDLs carry their types on the message parts and may have no
+	// <types> element at all, so the parent is not guaranteed to exist
+	if (!element)
+		return [];
 	var children = element.childNodes;
 	var result = [];
 	for (var i = 0, n = children.length; i < n; ++i) {

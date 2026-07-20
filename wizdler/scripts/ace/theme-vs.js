@@ -1,10 +1,12 @@
-define('ace/theme/vs', ['require', 'exports', 'module', 'ace/lib/dom'],
+ace.define('ace/theme/vs', ['require', 'exports', 'module', 'ace/lib/dom'],
 function(require, exports, module){
 
+exports.$id = 'ace/theme/vs';
+exports.isDark = false;
 exports.cssClass = 'ace-vs';
 exports.cssText = "\
 .ace-vs.ace_editor, .ace-vs .ace_text-layer {\
-  font-family: Consolas;\
+  font-family: Consolas, Menlo, Monaco, 'Courier New', monospace;\
   font-size: 13px;\
   line-height: 16px;\
 }\
@@ -100,7 +102,7 @@ exports.cssText = "\
   border: 1px solid #ccc;\
 }\
 \
-.ace-vs .ace_marker-layer .ace_active_line {\
+.ace-vs .ace_marker-layer .ace_active-line {\
   background: #fafafa;\
 }";
 
